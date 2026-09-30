@@ -73,9 +73,8 @@ class TestCheckOut:
     def test_rule5_failure_after_insert_rolls_back_both_writes(self, api, make_asset, make_employee):
         asset, emp = make_asset(), make_employee()
         # Make the second write (asset status update) blow up after the CheckOut INSERT.
-        with mock.patch.object(Asset, "save", side_effect=RuntimeError("disk full")):
-            with pytest.raises(RuntimeError):
-                post_checkout(api, asset, emp)
+        with mock.patch.object(Asset, "save", side_effect=RuntimeError("disk full")), pytest.raises(RuntimeError):
+            post_checkout(api, asset, emp)
         asset.refresh_from_db()
         assert asset.status == Asset.Status.AVAILABLE
         assert not CheckOut.objects.filter(asset=asset).exists()

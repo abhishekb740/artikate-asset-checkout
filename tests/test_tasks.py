@@ -11,8 +11,9 @@ from assets.tasks import flag_overdue_checkouts
 def test_task_is_idempotent_within_a_day(make_asset, make_employee, make_checkout):
     now = timezone.now()
     emp = make_employee()
-    overdue_1 = make_checkout(make_asset(), emp, checked_out_at=now - timedelta(days=5), due_at=now - timedelta(days=1))
-    overdue_2 = make_checkout(make_asset(), emp, checked_out_at=now - timedelta(days=5), due_at=now - timedelta(hours=1))
+    five_days_ago = now - timedelta(days=5)
+    overdue_1 = make_checkout(make_asset(), emp, checked_out_at=five_days_ago, due_at=now - timedelta(days=1))
+    overdue_2 = make_checkout(make_asset(), emp, checked_out_at=five_days_ago, due_at=now - timedelta(hours=1))
     make_checkout(make_asset(), emp, checked_out_at=now, due_at=now + timedelta(days=2))            # not overdue
     make_checkout(make_asset(), emp, checked_out_at=now - timedelta(days=9),
                   due_at=now - timedelta(days=4), returned_at=now - timedelta(days=3))              # returned

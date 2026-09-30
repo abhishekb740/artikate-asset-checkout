@@ -68,7 +68,11 @@ class Command(BaseCommand):
         for i, (tag, name, category) in enumerate(ASSETS):
             assets[tag], _ = Asset.objects.update_or_create(
                 asset_tag=tag,
-                defaults={"name": name, "category": category, "purchase_date": date(2024, 1, 1) + timedelta(days=30 * i)},
+                defaults={
+                    "name": name,
+                    "category": category,
+                    "purchase_date": date(2024, 1, 1) + timedelta(days=30 * i),
+                },
             )
 
         employees = {}
@@ -99,7 +103,9 @@ class Command(BaseCommand):
             Asset.objects.filter(pk=assets[tag].pk).update(status=new_status)
 
         User = get_user_model()
-        user, created = User.objects.get_or_create(username=DEMO_USERNAME, defaults={"is_staff": True, "is_superuser": True})
+        user, created = User.objects.get_or_create(
+            username=DEMO_USERNAME, defaults={"is_staff": True, "is_superuser": True},
+        )
         if created:
             user.set_password(DEMO_PASSWORD)
             user.save()

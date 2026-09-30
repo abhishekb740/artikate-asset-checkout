@@ -65,11 +65,11 @@ def check_out(*, asset_tag: str, employee_code: str, due_at: datetime) -> CheckO
             try:
                 asset = Asset.objects.select_for_update().get(asset_tag=asset_tag)
             except Asset.DoesNotExist:
-                raise NotFound(f"Asset '{asset_tag}' not found.")
+                raise NotFound(f"Asset '{asset_tag}' not found.") from None
             try:
                 employee = Employee.objects.select_for_update().get(employee_code=employee_code)
             except Employee.DoesNotExist:
-                raise NotFound(f"Employee '{employee_code}' not found.")
+                raise NotFound(f"Employee '{employee_code}' not found.") from None
 
             if not employee.is_active:
                 raise ValidationError({"employee_code": "Inactive employees cannot check out assets."})
@@ -89,10 +89,10 @@ def check_out(*, asset_tag: str, employee_code: str, due_at: datetime) -> CheckO
             checkout = CheckOut.objects.create(asset=asset, employee=employee, due_at=due_at)
             asset.status = Asset.Status.CHECKED_OUT
             asset.save(update_fields=["status", "updated_at"])
-    except IntegrityError:
+    except IntegrityError as exc:
         # Only reachable if something bypassed the row lock; the partial unique
         # index rejected a second open check-out for this asset.
-        raise Conflict(f"Asset '{asset_tag}' is already checked out.")
+        raise Conflict(f"Asset '{asset_tag}' is already checked out.") from exc
     return checkout
 
 
@@ -102,7 +102,7 @@ def return_checkout(*, checkout_id: int, condition_note: str = "", needs_mainten
         try:
             checkout = CheckOut.objects.select_for_update().get(pk=checkout_id)
         except CheckOut.DoesNotExist:
-            raise NotFound(f"Check-out {checkout_id} not found.")
+            raise NotFound(f"Check-out {checkout_id} not found.") from None
         if checkout.returned_at is not None:
             raise Conflict(f"Check-out {checkout_id} was already returned at {checkout.returned_at.isoformat()}.")
 

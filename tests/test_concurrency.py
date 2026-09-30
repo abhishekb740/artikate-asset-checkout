@@ -19,7 +19,6 @@ from rest_framework.test import APIClient
 
 from assets.models import Asset, CheckOut
 
-
 _real_count = QuerySet.count
 
 
