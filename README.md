@@ -4,7 +4,7 @@ A small Django REST API that tracks equipment checked out to and returned by emp
 
 - **Stack:** Django 5.1, Django REST Framework, PostgreSQL 16, Celery 5 with Redis, pytest-django, Docker Compose.
 - **Written answers** for Parts B, C and D are in [`ANSWERS.md`](ANSWERS.md).
-- **Screen recording:** _link to be added here_ (see Known gaps).
+- **Screen recording (9 min):** https://drive.google.com/file/d/1RkJm5fcln-ueBCjT4jBevrPA6EtlOPcc/view
 
 ---
 
@@ -158,7 +158,6 @@ curl -X POST http://localhost:8000/api/v1/checkouts/ \
 
 ## Known gaps
 
-- **Screen recording:** not linked yet. It will be added here before the repository is submitted.
 - **No CRUD endpoints for employees.** The brief lists none. Employees come from `seed_demo_data` or `/admin/`.
 - **The concurrency tests use threads within one process,** each with its own database connection. That is a real test of the database locking, but not of multiple gunicorn processes.
 - **The single-asset race test passes even with the asset lock removed,** because the partial unique index still produces the 409 (found by deliberately removing the locks; see the commit history). The same-employee race test does fail without the employee lock, so it guards that lock.
