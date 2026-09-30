@@ -7,14 +7,35 @@ its own database connection. A Barrier releases both threads at the same
 instant.
 """
 import threading
+import time
 from datetime import timedelta
+from unittest import mock
 
 import pytest
 from django.db import IntegrityError, connection, transaction
+from django.db.models import QuerySet
 from django.utils import timezone
 from rest_framework.test import APIClient
 
 from assets.models import Asset, CheckOut
+
+
+_real_count = QuerySet.count
+
+
+def _slow_count(self):
+    """QuerySet.count() that holds the transaction open for a moment afterwards.
+
+    Starting two threads at a Barrier is not enough on its own: the first
+    request can finish before the second one reaches its own reads, and then
+    the test passes whether or not the code locks anything (verified by
+    deleting the locks - it still passed). Sleeping right after the
+    open-check-out count widens the check-then-insert window so that, without
+    a lock, both requests are guaranteed to read before either one writes.
+    """
+    result = _real_count(self)
+    time.sleep(0.3)
+    return result
 
 
 def _race(user, payloads):
@@ -31,11 +52,12 @@ def _race(user, payloads):
         finally:
             connection.close()  # each thread owns its own connection
 
-    threads = [threading.Thread(target=worker, args=(i, p)) for i, p in enumerate(payloads)]
-    for t in threads:
-        t.start()
-    for t in threads:
-        t.join(timeout=30)
+    with mock.patch.object(QuerySet, "count", _slow_count):
+        threads = [threading.Thread(target=worker, args=(i, p)) for i, p in enumerate(payloads)]
+        for t in threads:
+            t.start()
+        for t in threads:
+            t.join(timeout=30)
     return results
 
 
