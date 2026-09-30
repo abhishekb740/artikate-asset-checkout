@@ -1,0 +1,68 @@
+# Four services: the Django app, PostgreSQL, Redis and a Celery worker.
+# The worker also runs Celery Beat embedded (-B), which is fine for a single
+# worker; in production Beat would be its own single-replica service so that
+# scaling workers never duplicates the schedule.
+
+x-app-env: &app-env
+  DJANGO_DEBUG: "true"
+  DJANGO_SECRET_KEY: "dev-only-insecure-key-change-me"
+  DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,0.0.0.0,web"
+  POSTGRES_DB: assets
+  POSTGRES_USER: assets
+  POSTGRES_PASSWORD: assets
+  POSTGRES_HOST: db
+  POSTGRES_PORT: "5432"
+  CELERY_BROKER_URL: redis://redis:6379/0
+  CELERY_RESULT_BACKEND: redis://redis:6379/0
+
+services:
+  web:
+    build: .
+    environment: *app-env
+    ports:
+      - "${WEB_PORT:-8000}:8000"   # WEB_PORT=8001 docker compose up -d  if 8000 is taken
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/api/v1/health/')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  worker:
+    build: .
+    command: celery -A config worker -B -l info --schedule /tmp/celerybeat-schedule
+    environment: *app-env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: assets
+      POSTGRES_USER: assets
+      POSTGRES_PASSWORD: assets
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U assets -d assets"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pgdata:
